@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device=device-width, initial-scale=1" />
+  <title>BrikQ — App Suite (Product‑Grade Mock)</title>
+  <meta name="description" content="BrikQ: multi-tenant construction AI platform — full product-grade mock with auth, orgs, projects, role-based UI, dashboards, CRUD tables, settings, API keys, billing, audit logs, notifications, and per-product demos." />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui'] },
+          colors: {
+            brand: {
+              orange: '#FF7A00',
+              cyan: '#00C2FF',
+              base: '#0E0F11',
+              panel: '#151619',
+              ink: '#0A0B0C',
+              text: '#E8E8E8',
+              sub: '#B9B9B9'
+            }
+          },
+          boxShadow: {
+            'glow': '0 0 0 1px rgba(0,194,255,0.25), 0 12px 45px rgba(0,194,255,0.20)',
+          },
+          backgroundImage: {
+            'hero': 'radial-gradient(1000px 420px at 20% -10%, rgba(255,122,0,0.35), transparent), radial-gradient(720px 320px at 90% -10%, rgba(0,194,255,0.25), transparent)'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    :root { color-scheme: dark; }
+    html, body { scroll-behavior: smooth; }
+    body { background:#0E0F11; color:#E8E8E8; font-family: Inter, ui-sans-serif, system-ui; }
+    .glass { backdrop-filter: blur(12px); background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03)); }
+    .panel { background:#151619; border:1px solid rgba(255,255,255,0.06); }
+    .chip { border:1px solid rgba(0,194,255,0.35); color:#00C2FF; background: rgba(0,194,255,0.06); }
+    .cta { background: linear-gradient(90deg, #FF7A00, #00C2FF); color:#0A0B0C; transition: transform .15s ease, box-shadow .2s ease; }
+    .cta:hover { transform: translateY(-1px); box-shadow: 0 0 0 1px rgba(255,122,0,0.25),0 12px 40px rgba(0,194,255,0.25); }
+    .accent-border { border-color: rgba(0,194,255,0.35); }
+    .muted { color:#B9B9B9; }
+    .tab-active { background:rgba(0,194,255,0.08); border-color: rgba(0,194,255,0.45); }
+    .kbd { border:1px solid rgba(255,255,255,0.18); background:#0A0B0C; border-radius: 8px; padding: 0 6px; }
+    .menu-item:hover { background: rgba(255,255,255,0.06); }
+    .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+    .scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.25) transparent; }
+    .btn { @apply px-3 py-2 rounded border accent-border text-sm; }
+  </style>
+</head>
+<body class="scroll">
+  <!-- AUTH LAYER (mock) -->
+  <div id="authLayer" class="fixed inset-0 z-[90] flex items-center justify-center bg-black/70">
+    <div class="w-[95%] max-w-md panel rounded-2xl p-6">
+      <div class="text-2xl font-extrabold">Sign in to BrikQ</div>
+      <p class="muted mt-1 text-sm">Multi-tenant — choose org & workspace after sign-in.</p>
+      <form id="authForm" class="mt-4 grid gap-3">
+        <input id="auth_email" type="email" required placeholder="you@company.com" class="px-3 py-2 rounded bg-black/30 border border-white/10">
+        <input id="auth_pwd" type="password" required placeholder="••••••••" class="px-3 py-2 rounded bg-black/30 border border-white/10">
+        <div class="flex items-center justify-between text-sm">
+          <label class="inline-flex items-center gap-2"><input type="checkbox" id="auth_sso"> Use SSO/SAML</label>
+          <a href="#" class="text-brand-cyan">Forgot?</a>
+        </div>
+        <button class="cta px-4 py-2 rounded-xl">Continue</button>
+      </form>
+      <div class="mt-4 grid gap-2 text-sm">
+        <button id="authGoogle" class="px-3 py-2 rounded border accent-border">Continue with Google</button>
+        <button id="authDemo" class="px-3 py-2 rounded border accent-border">Use Demo Account</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- APP SHELL -->
+  <div id="appShell" class="hidden">
+    <!-- TOP BAR -->
+    <header class="fixed top-0 inset-x-0 z-50">
+      <div class="mx-auto max-w-[1400px] px-4">
+        <div class="mt-3 mb-2 rounded-2xl glass border border-white/10">
+          <div class="flex items-center justify-between px-4 py-2">
+            <div class="flex items-center gap-3">
+              <button id="navToggle" class="p-2 rounded-xl border border-white/10" title="Toggle sidebar">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M3 6h14v2H3zm0 3h10v2H3zm0 3h14v2H3z"/></svg>
+              </button>
+              <a href="#" class="flex items-center gap-2">
+                <span class="inline-block w-8 h-8 rounded-xl" style="background:linear-gradient(135deg,#FF7A00,#00C2FF)"></span>
+                <span class="font-extrabold text-lg">BrikQ</span>
+              </a>
+              <!-- ORG SWITCHER -->
+              <div class="relative ml-2">
+                <button id="orgBtn" class="px-3 py-2 rounded-lg border accent-border text-sm">Org: <span id="orgLabel">Acme GC</span></button>
+                <div id="orgMenu" class="hidden absolute left-0 mt-2 w-64 panel rounded-xl p-3 text-sm">
+                  <div class="font-bold mb-2">Organizations</div>
+                  <div class="space-y-1" id="orgList"></div>
+                  <div class="border-t border-white/10 my-2"></div>
+                  <button class="px-3 py-2 rounded border accent-border w-full text-left">+ New Organization</button>
+                </div>
+              </div>
+              <!-- PROJECT SWITCHER -->
+              <div class="relative">
+                <button id="projBtn" class="px-3 py-2 rounded-lg border accent-border text-sm">Project: <span id="projLabel">PX-101 — Uptown Tower</span></button>
+                <div id="projMenu" class="hidden absolute left-0 mt-2 w-[520px] panel rounded-xl p-3 text-sm">
+                  <div class="font-bold mb-2">Projects</div>
+                  <input id="projSearch" placeholder="Search projects..." class="w-full px-2 py-1 rounded bg-black/30 border border-white/10 mb-2">
+                  <div class="grid grid-cols-2 gap-2 max-h-64 overflow-auto" id="projList"></div>
+                  <div class="border-t border-white/10 my-2"></div>
+                  <button class="px-3 py-2 rounded border accent-border w-full text-left">+ New Project</button>
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="relative">
+                <input id="globalSearch" placeholder="Search (/)" class="w-72 px-3 py-2 rounded-lg bg-black/30 border border-white/10">
+                <span class="absolute right-2 top-2 text-xs muted">/</span>
+              </div>
+              <select id="lang" class="px-2 py-2 rounded-lg bg-black/30 border border-white/10">
+                <option value="en">English</option><option value="fa">فارسی</option><option value="es">Español</option>
+              </select>
+              <button id="themeBtn" class="px-3 py-2 rounded-lg border accent-border" title="Toggle theme">Theme</button>
+              <div class="relative">
+                <button id="notifBtn" class="px-3 py-2 rounded-lg border accent-border">🔔</button>
+                <div id="notifMenu" class="hidden absolute right-0 mt-2 w-80 panel rounded-xl p-3 text-sm">
+                  <div class="font-bold mb-2">Notifications</div>
+                  <div class="space-y-2" id="notifList"></div>
+                </div>
+              </div>
+              <div class="relative">
+                <button id="userBtn" class="px-3 py-2 rounded-lg border accent-border">AC</button>
+                <div id="userMenu" class="hidden absolute right-0 mt-2 w-64 panel rounded-xl p-2 text-sm">
+                  <a class="block px-3 py-2 rounded menu-item" data-route="profile">Profile</a>
+                  <a class="block px-3 py-2 rounded menu-item" data-route="billing">Billing</a>
+                  <a class="block px-3 py-2 rounded menu-item" data-route="teams">Teams & Roles</a>
+                  <a class="block px-3 py-2 rounded menu-item" data-route="settings">Settings</a>
+                  <div class="border-t border-white/10 my-1"></div>
+                  <a class="block px-3 py-2 rounded menu-item" id="signOut">Sign out</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- SIDEBAR + CONTENT -->
+    <div class="pt-20 mx-auto max-w-[1400px] px-4 grid grid-cols-[260px_1fr] gap-3">
+      <!-- Sidebar -->
+      <aside id="sidebar" class="panel rounded-2xl p-3 h-[calc(100vh-100px)] sticky top-20 overflow-auto scroll">
+        <div class="font-bold mb-2">Workspace</div>
+        <nav class="grid gap-1 text-sm" id="sidebarNav">
+          <button class="rounded-lg px-3 py-2 text-left menu-item" data-route="home">🏠 Home</button>
+          <button class="rounded-lg px-3 py-2 text-left menu-item" data-route="dashboard">📊 Dashboard</button>
+          <button class="rounded-lg px-3 py-2 text-left menu-item" data-route="preconstruction">🧱 Preconstruction</button>
+          <button class="rounded-lg px-3 py-2 text-left menu-item" data-route="field">📸 Field</button>
+          <button class="rounded-lg px-3 py-2 text-left menu-item" data-route="safety">🦺 Safety</button>
+          <button class="rounded-lg px-3 py-2 text-left menu-item" data-route="forecasting">📈 Forecasting</button>
+          <button class="rounded-lg px-3 py-2 text-left menu-item" data-route="reporting">📝 Reporting</button>
+          <button class="rounded-lg px-3 py-2 text-left menu-item" data-route="integrations">🔗 Integrations</button>
+          <div class="border-t border-white/10 my-2"></div>
+          <button class="rounded-lg px-3 py-2 text-left menu-item" data-route="projects">📁 Projects</button>
+          <button class="rounded-lg px-3 py-2 text-left menu-item" data-route="issues">🚩 Issues</button>
+          <button class="rounded-lg px-3 py-2 text-left menu-item" data-route="reports">📄 Reports</button>
+          <button class="rounded-lg px-3 py-2 text-left menu-item" data-route="audit">🧾 Audit Log</button>
+          <button class="rounded-lg px-3 py-2 text-left menu-item" data-route="apikeys">🔐 API Keys</button>
+          <button class="rounded-lg px-3 py-2 text-left menu-item" data-route="billing">💳 Billing</button>
+          <button class="rounded-lg px-3 py-2 text-left menu-item" data-route="settings">⚙️ Settings</button>
+          <div class="border-t border-white/10 my-2"></div>
+          <button class="rounded-lg px-3 py-2 text-left menu-item" data-route="help">❓ Help & Docs</button>
+        </nav>
+        <div class="mt-4">
+          <div class="font-bold mb-1">Onboarding</div>
+          <ul class="text-xs space-y-1">
+            <li><input type="checkbox" id="ob1"> Connect Procore</li>
+            <li><input type="checkbox" id="ob2"> Invite your team</li>
+            <li><input type="checkbox" id="ob3"> Create first report</li>
+          </ul>
+        </div>
+      </aside>
+
+      <!-- Main Content -->
+      <main id="content" class="min-h-[calc(100vh-100px)]">
+        <!-- Views will render here -->
+      </main>
+    </div>
+  </div>
+
+  <!-- REUSABLE MODALS & TOAST -->
+  <div id="modal" class="hidden fixed inset-0 z-[80]">
+    <div class="absolute inset-0 bg-black/60" onclick="closeModal()"></div>
+    <div class="absolute left-1/2 -translate-x-1/2 top-24 w-[95%] max-w-3xl panel rounded-2xl p-6">
+      <div class="flex items-center justify-between">
+        <div class="text-lg font-bold" id="modalTitle">Modal</div>
+        <button class="px-2 py-1 rounded border accent-border" onclick="closeModal()">Close</button>
+      </div>
+      <div id="modalBody" class="mt-4"></div>
+    </div>
+  </div>
+  <div id="toast" class="hidden fixed bottom-4 left-1/2 -translate-x-1/2 panel px-4 py-3 rounded-xl text-sm z-[90]">Toast</div>
+
+  <script>
+    /* ----------------------
+       DATA (mock + persistence)
+    ----------------------- */
+    const LS = (k,v)=>v===undefined?JSON.parse(localStorage.getItem(k)||'null'):(localStorage.setItem(k,JSON.stringify(v)),v);
+    const now = ()=>new Date().toISOString();
+
+    const MOCK = {
+      orgs: [
+        { id:'org1', name:'Acme GC', role:'admin' },
+        { id:'org2', name:'Metro Builders', role:'member' },
+        { id:'org3', name:'City Inspectors', role:'viewer' }
+      ],
+      projects: Array.from({length:18}).map((_,i)=>({
+        id:'PX-'+(100+i),
+        name: i%2? 'Uptown Tower' : 'Riverside Campus ' + (i%3+1),
+        budget: (10+i)*1_000_000,
+        status: ['Planning','Active','Blocked','Done'][i%4],
+        stage: ['preconstruction','field','safety','forecasting','reporting'][i%5],
+        updatedAt: now()
+      })),
+      issues: Array.from({length:24}).map((_,i)=>({
+        id:'ISS-'+(1000+i),
+        title:['PPE missing','Delay: materials','Safety incident','Inspection scheduled'][i%4],
+        severity:['low','med','high'][i%3],
+        assignee:['Alex','Maria','Ling','Omar'][i%4],
+        status:['open','in_progress','resolved'][i%3],
+        updatedAt: now()
+      })),
+      notifications: [
+        { id:'n1', msg:'2 new risk alerts on Uptown Tower', ts: now()},
+        { id:'n2', msg:'Weekly report is ready for Riverside', ts: now()},
+        { id:'n3', msg:'Procore integration connected', ts: now()}
+      ],
+      apikeys: [{ id:'k1', name:'Server Key', created:now(), lastUsed:now() }],
+      audit: Array.from({length:12}).map((_,i)=>({ts: now(), actor:['You','Maria','System'][i%3], action:['created','updated','deleted'][i%3], target:['Project','Issue','Report'][i%3]+' #'+(100+i)})),
+      billing: { plan:'Pro', price:399, cycle:'monthly', seats:10, invoices:[{id:'INV-1001', amount:399, ts:now(), status:'paid'}] }
+    };
+
+    const state = LS('brikq_state') || {
+      auth:false, user:{name:'Alex Carter', email:'alex@acme.com'}, orgId:'org1', projectId:'PX-100',
+      lang:'en', theme:'dark', sidebar:true, checklist:{ob1:false,ob2:false,ob3:false}
+    };
+
+    function persist(){ LS('brikq_state', state); }
+
+    /* ----------------------
+       UTIL
+    ----------------------- */
+    function el(html){ const d=document.createElement('div'); d.innerHTML=html.trim(); return d.firstChild; }
+    function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.remove('hidden'); setTimeout(()=>t.classList.add('hidden'), 2200); }
+    function openModal(title, bodyHTML){ document.getElementById('modalTitle').textContent = title; document.getElementById('modalBody').innerHTML = bodyHTML; document.getElementById('modal').classList.remove('hidden'); }
+    function closeModal(){ document.getElementById('modal').classList.add('hidden'); }
+
+    function fmtMoney(v){ return '$'+(v).toLocaleString(); }
+
+    /* ----------------------
+       AUTH
+    ----------------------- */
+    const authLayer = document.getElementById('authLayer');
+    document.getElementById('authForm').addEventListener('submit', (e)=>{
+      e.preventDefault();
+      state.auth = true; persist();
+      initApp();
+      toast('Signed in');
+    });
+    document.getElementById('authDemo').addEventListener('click', ()=>{
+      state.auth = true; persist(); initApp(); toast('Signed in as Demo');
+    });
+    document.getElementById('authGoogle').addEventListener('click', ()=>toast('Google OAuth (mock)'));
+
+    /* ----------------------
+       APP INIT
+    ----------------------- */
+    function initApp(){
+      authLayer.classList.add('hidden');
+      document.getElementById('appShell').classList.remove('hidden');
+      // Org list
+      const ol = document.getElementById('orgList'); ol.innerHTML='';
+      MOCK.orgs.forEach(o=>{
+        const b = el(`<button class="w-full text-left px-3 py-2 rounded menu-item">${o.name} <span class="muted">(${o.role})</span></button>`);
+        b.onclick = ()=>{ state.orgId=o.id; persist(); document.getElementById('orgLabel').textContent=o.name; toast('Switched org to '+o.name); };
+        ol.appendChild(b);
+      });
+      // Projects
+      const pl = document.getElementById('projList'); pl.innerHTML='';
+      MOCK.projects.forEach(p=>{
+        const b = el(`<button class="text-left p-2 rounded menu-item border border-white/5"><div class="font-bold">${p.id} — ${p.name}</div><div class="text-xs muted">${p.stage} • ${p.status}</div></button>`);
+        b.onclick = ()=>{ state.projectId = p.id; persist(); document.getElementById('projLabel').textContent = p.id+' — '+p.name; toast('Switched project to '+p.id); };
+        pl.appendChild(b);
+      });
+      // Notifications
+      const nl = document.getElementById('notifList'); nl.innerHTML = MOCK.notifications.map(n=>`<div class="p-2 rounded border border-white/5">${n.msg}<div class="text-xs muted">${n.ts}</div></div>`).join('');
+      // Onboarding
+      ['ob1','ob2','ob3'].forEach(k=>{ const cb = document.getElementById(k); cb.checked = state.checklist[k]; cb.onchange=()=>{ state.checklist[k]=cb.checked; persist(); }; });
+      // Sidebar toggle
+      document.getElementById('navToggle').onclick = ()=>{ const sb = document.getElementById('sidebar'); sb.classList.toggle('hidden'); };
+      // Menus
+      document.getElementById('orgBtn').onclick = ()=>document.getElementById('orgMenu').classList.toggle('hidden');
+      document.getElementById('projBtn').onclick = ()=>document.getElementById('projMenu').classList.toggle('hidden');
+      document.getElementById('notifBtn').onclick = ()=>document.getElementById('notifMenu').classList.toggle('hidden');
+      document.getElementById('userBtn').onclick = ()=>document.getElementById('userMenu').classList.toggle('hidden');
+      document.getElementById('signOut').onclick = ()=>{ state.auth=false; persist(); location.reload(); };
+
+      // Global search
+      document.getElementById('globalSearch').addEventListener('keydown', (e)=>{ if (e.key==='Enter'){ toast('Search for: '+e.target.value); }});
+      // Keyboard shortcuts
+      window.addEventListener('keydown', (e)=>{
+        if (e.key==='/') { e.preventDefault(); document.getElementById('globalSearch').focus(); }
+        if (e.key==='?') { e.preventDefault(); openModal('Keyboard Shortcuts', `<div class='grid grid-cols-2 gap-3 text-sm'><div><span class='kbd'>/</span> Focus Search</div><div><span class='kbd'>?</span> Help</div><div><span class='kbd'>G</span> Generate sample</div><div><span class='kbd'>E</span> Export</div><div><span class='kbd'>S</span> Share</div><div><span class='kbd'>Esc</span> Close</div></div>`); }
+      });
+
+      // Router
+      document.querySelectorAll('#sidebarNav [data-route]').forEach(btn=>btn.onclick = ()=>route(btn.dataset.route));
+      route('dashboard');
+    }
+
+    /* ----------------------
+       ROUTER + VIEWS
+    ----------------------- */
+    function route(name, params={}){
+      const c = document.getElementById('content');
+      window.location.hash = name;
+      const title = (t)=>`<div class="flex items-center justify-between mb-3">
+          <div>
+            <div class="text-xs muted">Org: ${MOCK.orgs.find(o=>o.id===state.orgId).name} • Project: ${state.projectId}</div>
+            <h1 class="text-2xl font-extrabold">${t}</h1>
+          </div>
+          <div class="flex gap-2">
+            <button class="px-3 py-2 rounded border accent-border" onclick="toast('Shared (mock)')">Share</button>
+            <button class="px-3 py-2 rounded border accent-border" onclick="toast('Exported (mock)')">Export</button>
+            <button class="cta px-4 py-2 rounded-xl" onclick="toast('Request sent')">Request Demo</button>
+          </div>
+        </div>`;
+
+      if (name==='home'){
+        c.innerHTML = `
+          ${title('Home')}
+          <div class="grid lg:grid-cols-3 gap-3">
+            <div class="panel p-4 rounded-2xl"><div class="font-bold">Welcome back</div><p class="muted text-sm mt-1">Here’s a quick overview of what changed since you left.</p></div>
+            <div class="panel p-4 rounded-2xl"><div class="font-bold">Onboarding</div><p class="muted text-sm mt-1">Complete your checklist.</p></div>
+            <div class="panel p-4 rounded-2xl"><div class="font-bold">Docs</div><p class="muted text-sm mt-1">API & SDK, examples, and guides.</p></div>
+          </div>`;
+      }
+
+      if (name==='dashboard'){
+        // KPI cards + simple charts (SVG)
+        c.innerHTML = `
+          ${title('Executive Dashboard')}
+          <div class="grid md:grid-cols-4 gap-3">
+            <div class="panel p-4 rounded-2xl"><div class="muted text-xs">Active projects</div><div class="text-3xl font-extrabold">${MOCK.projects.filter(p=>p.status!=='Done').length}</div></div>
+            <div class="panel p-4 rounded-2xl"><div class="muted text-xs">Open issues</div><div class="text-3xl font-extrabold">${MOCK.issues.filter(i=>i.status!=='resolved').length}</div></div>
+            <div class="panel p-4 rounded-2xl"><div class="muted text-xs">Budget at risk</div><div class="text-3xl font-extrabold">${fmtMoney(2_500_000)}</div></div>
+            <div class="panel p-4 rounded-2xl"><div class="muted text-xs">On-time</div><div class="text-3xl font-extrabold">78%</div></div>
+          </div>
+          <div class="grid lg:grid-cols-2 gap-3 mt-3">
+            <div class="panel p-4 rounded-2xl">
+              <div class="font-bold">Risk Heatmap</div>
+              <div class="grid grid-cols-5 gap-1 mt-2" id="heat"></div>
+            </div>
+            <div class="panel p-4 rounded-2xl">
+              <div class="font-bold">Schedule Trend</div>
+              <svg viewBox="0 0 500 220" class="w-full h-auto mt-3" id="trend"><rect width="500" height="220" rx="12" fill="#0A0B0C"/></svg>
+            </div>
+          </div>`;
+        const heat = document.getElementById('heat');
+        for(let i=0;i<25;i++){ const r=Math.random(); heat.appendChild(el(`<div class="h-10 rounded" style="background:${r>0.7?'rgba(255,80,80,0.9)':r>0.4?'rgba(255,170,0,0.9)':'rgba(0,194,255,0.7)'}"></div>`)); }
+        const svg = document.getElementById('trend');
+        const path = document.createElementNS('http://www.w3.org/2000/svg','polyline');
+        path.setAttribute('points','20,180 100,160 180,150 260,120 340,90 420,70');
+        path.setAttribute('fill','none'); path.setAttribute('stroke','#00C2FF'); path.setAttribute('stroke-width','3');
+        svg.appendChild(path);
+      }
+
+      if (name==='projects'){
+        // Table with search, sort, pagination, column toggles, CRUD
+        const cols = ['id','name','stage','status','budget'];
+        c.innerHTML = `
+          ${title('Projects')}
+          <div class="panel p-3 rounded-2xl">
+            <div class="flex flex-wrap items-center gap-2">
+              <input id="pSearch" placeholder="Search..." class="px-2 py-1 rounded bg-black/30 border border-white/10">
+              <select id="pStage" class="px-2 py-1 rounded bg-black/30 border border-white/10">
+                <option value="">All stages</option><option>preconstruction</option><option>field</option><option>safety</option><option>forecasting</option><option>reporting</option>
+              </select>
+              <button class="px-3 py-2 rounded border accent-border" onclick="openProjectModal()">+ New Project</button>
+              <div class="ml-auto flex gap-2">
+                <button class="px-2 py-1 rounded border accent-border text-xs" onclick="toast('Export CSV (mock)')">Export CSV</button>
+                <button class="px-2 py-1 rounded border accent-border text-xs" onclick="toast('Import (mock)')">Import</button>
+              </div>
+            </div>
+            <div class="mt-3 overflow-auto">
+              <table class="w-full text-sm" id="pTable">
+                <thead><tr>${cols.map(cn=>`<th class="text-left py-2 cursor-pointer" data-col="${cn}" onclick="sortProjects('${cn}')">${cn.toUpperCase()}</th>`).join('')}<th></th></tr></thead>
+                <tbody></tbody>
+              </table>
+              <div class="mt-2 flex items-center justify-between text-xs">
+                <div id="pCount"></div>
+                <div class="flex gap-2"><button class="px-2 py-1 rounded border accent-border" onclick="pageProjects(-1)">&lt;</button><span id="pPage">1</span><button class="px-2 py-1 rounded border accent-border" onclick="pageProjects(1)">&gt;</button></div>
+              </div>
+            </div>
+          </div>`;
+        window._pSort = { col:'id', dir:1 }; window._pPage = 1;
+        function renderProjects(){
+          const q = document.getElementById('pSearch').value.toLowerCase();
+          const st = document.getElementById('pStage').value;
+          let data = MOCK.projects.filter(p => (!q || (p.name.toLowerCase().includes(q) || p.id.toLowerCase().includes(q))) && (!st || p.stage===st));
+          data = data.sort((a,b)=> (a[_pSort.col] > b[_pSort.col] ? 1 : -1) * _pSort.dir );
+          const per=8, start=(window._pPage-1)*per, page=data.slice(start,start+per);
+          const tb = document.querySelector('#pTable tbody'); tb.innerHTML = page.map(p=>`
+            <tr class="border-t border-white/5">
+              <td class="py-2">${p.id}</td><td>${p.name}</td><td>${p.stage}</td><td>${p.status}</td><td>${fmtMoney(p.budget)}</td>
+              <td class="text-right"><button class="px-2 py-1 rounded border accent-border text-xs" onclick="openProjectModal('${p.id}')">Edit</button></td>
+            </tr>`).join('');
+          document.getElementById('pCount').textContent = `${data.length} results`;
+          document.getElementById('pPage').textContent = window._pPage;
+        }
+        window.sortProjects = (col)=>{ window._pSort = { col, dir: (window._pSort.col===col? -window._pSort.dir : 1) }; renderProjects(); };
+        window.pageProjects = (delta)=>{ window._pPage = Math.max(1, window._pPage + delta); renderProjects(); };
+        document.getElementById('pSearch').oninput = ()=>{ window._pPage=1; renderProjects(); };
+        document.getElementById('pStage').onchange = ()=>{ window._pPage=1; renderProjects(); };
+        window.openProjectModal = (id)=>{
+          const p = MOCK.projects.find(x=>x.id===id) || {id:'PX-NEW', name:'', stage:'planning', status:'Planning', budget:1_000_000};
+          openModal(id? 'Edit Project' : 'New Project', `
+            <div class="grid sm:grid-cols-2 gap-3 text-sm">
+              <label>ID<input id="m_id" class="w-full mt-1 px-2 py-1 rounded bg-black/30 border border-white/10" value="${p.id}"></label>
+              <label>Name<input id="m_name" class="w-full mt-1 px-2 py-1 rounded bg-black/30 border border-white/10" value="${p.name}"></label>
+              <label>Stage<select id="m_stage" class="w-full mt-1 px-2 py-1 rounded bg-black/30 border border-white/10"><option>preconstruction</option><option>field</option><option>safety</option><option>forecasting</option><option>reporting</option></select></label>
+              <label>Status<select id="m_status" class="w-full mt-1 px-2 py-1 rounded bg-black/30 border border-white/10"><option>Planning</option><option>Active</option><option>Blocked</option><option>Done</option></select></label>
+              <label>Budget<input id="m_budget" type="number" class="w-full mt-1 px-2 py-1 rounded bg-black/30 border border-white/10" value="${p.budget}"></label>
+            </div>
+            <div class="mt-4 flex justify-end gap-2">
+              <button class="px-3 py-2 rounded border accent-border" onclick="closeModal()">Cancel</button>
+              <button class="cta px-4 py-2 rounded-xl" onclick="saveProject('${id||''}')">Save</button>
+            </div>`);
+          setTimeout(()=>{ document.getElementById('m_stage').value = p.stage; document.getElementById('m_status').value = p.status; }, 0);
+        };
+        window.saveProject = (oldId)=>{
+          const p = {
+            id: document.getElementById('m_id').value.trim(),
+            name: document.getElementById('m_name').value.trim(),
+            stage: document.getElementById('m_stage').value,
+            status: document.getElementById('m_status').value,
+            budget: Number(document.getElementById('m_budget').value||0),
+            updatedAt: now()
+          };
+          const idx = MOCK.projects.findIndex(x=>x.id===oldId);
+          if (idx>=0) MOCK.projects[idx]=p; else MOCK.projects.unshift(p);
+          closeModal(); toast('Saved'); renderProjects();
+        };
+        renderProjects();
+      }
+
+      if (name==='issues'){
+        c.innerHTML = `
+          ${title('Issues')}
+          <div class="panel p-3 rounded-2xl">
+            <div class="flex gap-2">
+              <input id="iSearch" placeholder="Search issues..." class="px-2 py-1 rounded bg-black/30 border border-white/10">
+              <select id="iStatus" class="px-2 py-1 rounded bg-black/30 border border-white/10"><option value="">All</option><option>open</option><option>in_progress</option><option>resolved</option></select>
+              <button class="px-3 py-2 rounded border accent-border" onclick="openIssue()">+ New Issue</button>
+            </div>
+            <div id="iList" class="mt-3 grid gap-2"></div>
+          </div>`;
+        function renderIssues(){
+          const q=document.getElementById('iSearch').value.toLowerCase(), st=document.getElementById('iStatus').value;
+          const list = MOCK.issues.filter(i=>(!q||i.title.toLowerCase().includes(q)||i.id.toLowerCase().includes(q))&&(!st||i.status===st));
+          const ctn = document.getElementById('iList'); ctn.innerHTML = list.map(i=>`
+            <div class="p-3 rounded border border-white/10 flex items-center justify-between">
+              <div>
+                <div class="font-bold">${i.id} — ${i.title}</div>
+                <div class="text-xs muted">${i.severity} • ${i.status} • ${i.assignee}</div>
+              </div>
+              <div class="flex gap-2">
+                <button class="px-2 py-1 rounded border accent-border text-xs" onclick="openIssue('${i.id}')">Edit</button>
+                <button class="px-2 py-1 rounded border accent-border text-xs" onclick="toast('Comment added (mock)')">Comment</button>
+              </div>
+            </div>`).join('');
+        }
+        window.openIssue = (id)=>{
+          const x = MOCK.issues.find(z=>z.id===id) || {id:'ISS-NEW', title:'', severity:'med', assignee:'Alex', status:'open'};
+          openModal(id?'Edit Issue':'New Issue', `
+            <div class="grid sm:grid-cols-2 gap-3 text-sm">
+              <label>ID<input id="is_id" class="w-full mt-1 px-2 py-1 rounded bg-black/30 border border-white/10" value="${x.id}"></label>
+              <label>Title<input id="is_title" class="w-full mt-1 px-2 py-1 rounded bg-black/30 border border-white/10" value="${x.title}"></label>
+              <label>Severity<select id="is_sev" class="w-full mt-1 px-2 py-1 rounded bg-black/30 border border-white/10"><option>low</option><option selected>med</option><option>high</option></select></label>
+              <label>Status<select id="is_st" class="w-full mt-1 px-2 py-1 rounded bg-black/30 border border-white/10"><option>open</option><option>in_progress</option><option>resolved</option></select></label>
+              <label>Assignee<select id="is_as" class="w-full mt-1 px-2 py-1 rounded bg-black/30 border border-white/10"><option>Alex</option><option>Maria</option><option>Ling</option><option>Omar</option></select></label>
+            </div>
+            <div class="mt-4 flex justify-end gap-2">
+              <button class="px-3 py-2 rounded border accent-border" onclick="closeModal()">Cancel</button>
+              <button class="cta px-4 py-2 rounded-xl" onclick="saveIssue('${id||''}')">Save</button>
+            </div>`);
+          setTimeout(()=>{ document.getElementById('is_sev').value=x.severity; document.getElementById('is_st').value=x.status; document.getElementById('is_as').value=x.assignee; },0);
+        };
+        window.saveIssue = (oldId)=>{
+          const v = { id:document.getElementById('is_id').value.trim(), title:document.getElementById('is_title').value.trim(), severity:document.getElementById('is_sev').value, status:document.getElementById('is_st').value, assignee:document.getElementById('is_as').value, updatedAt:now() };
+          const idx = MOCK.issues.findIndex(z=>z.id===oldId);
+          if (idx>=0) MOCK.issues[idx]=v; else MOCK.issues.unshift(v);
+          closeModal(); toast('Saved'); route('issues');
+        };
+        document.getElementById('iSearch').oninput=renderIssues; document.getElementById('iStatus').onchange=renderIssues; renderIssues();
+      }
+
+      if (name==='reports'){
+        c.innerHTML = `
+          ${title('Reports')}
+          <div class="panel p-4 rounded-2xl">
+            <div class="flex gap-2">
+              <select id="rTpl" class="px-2 py-1 rounded bg-black/30 border border-white/10"><option>Daily Report</option><option>Weekly Summary</option><option>Executive Brief</option></select>
+              <button class="px-3 py-2 rounded border accent-border" onclick="toast('Loaded template')">Load</button>
+              <button class="px-3 py-2 rounded border accent-border" onclick="toast('Shared')">Share</button>
+              <button class="cta px-4 py-2 rounded-xl" onclick="toast('PDF generated')">Export PDF</button>
+            </div>
+            <div class="mt-3 rounded-xl border border-white/10 p-4">
+              <div class="font-bold" id="rTitle">Preview — select a template</div>
+              <div class="text-sm muted mt-2">Facts and photos populate automatically from your data.</div>
+            </div>
+          </div>`;
+      }
+
+      if (name==='audit'){
+        c.innerHTML = `
+          ${title('Audit Log')}
+          <div class="panel p-4 rounded-2xl">
+            <div class="grid gap-2 text-sm">
+              ${MOCK.audit.map(a=>`<div class="p-2 rounded border border-white/10">${a.ts} — <b>${a.actor}</b> ${a.action} <i>${a.target}</i></div>`).join('')}
+            </div>
+          </div>`;
+      }
+
+      if (name==='apikeys'){
+        c.innerHTML = `
+          ${title('API Keys & Webhooks')}
+          <div class="grid lg:grid-cols-2 gap-3">
+            <div class="panel p-4 rounded-2xl">
+              <div class="flex items-center justify-between"><div class="font-bold">API Keys</div><button class="px-3 py-2 rounded border accent-border" onclick="newKey()">+ New Key</button></div>
+              <div id="keyList" class="mt-3 grid gap-2"></div>
+            </div>
+            <div class="panel p-4 rounded-2xl">
+              <div class="font-bold">Webhooks</div>
+              <div class="text-sm mt-2">Endpoint URL</div>
+              <input id="whUrl" class="w-full px-2 py-1 rounded bg-black/30 border border-white/10" placeholder="https://example.com/webhook">
+              <div class="text-sm mt-2">Events</div>
+              <div class="grid grid-cols-2 gap-1 text-sm">
+                ${['project.updated','issue.created','report.ready','risk.alert'].map(e=>`<label class="inline-flex items-center gap-2"><input type="checkbox" checked> ${e}</label>`).join('')}
+              </div>
+              <div class="mt-3 flex gap-2"><button class="px-3 py-2 rounded border accent-border" onclick="toast('Saved (mock)')">Save</button><button class="cta px-4 py-2 rounded-xl" onclick="toast('Test event sent')">Send Test</button></div>
+            </div>
+          </div>`;
+        function renderKeys(){ document.getElementById('keyList').innerHTML = MOCK.apikeys.map(k=>`<div class="p-2 rounded border border-white/10 flex items-center justify-between"><div><div class="font-bold">${k.name}</div><div class="text-xs muted">Created ${k.created}</div></div><div class="flex gap-2"><button class="px-2 py-1 rounded border accent-border text-xs" onclick="toast('Copied')">Copy</button><button class="px-2 py-1 rounded border accent-border text-xs" onclick="delKey('${k.id}')">Revoke</button></div></div>`).join(''); }
+        window.newKey = ()=>{ const id='k'+Math.random().toString(36).slice(2,7); MOCK.apikeys.push({id, name:'Key '+id, created:now(), lastUsed:null}); renderKeys(); toast('Key created'); };
+        window.delKey = (id)=>{ const i=MOCK.apikeys.findIndex(k=>k.id===id); if (i>=0) MOCK.apikeys.splice(i,1); renderKeys(); toast('Key revoked'); };
+        renderKeys();
+      }
+
+      if (name==='billing'){
+        const b = MOCK.billing;
+        c.innerHTML = `
+          ${title('Billing')}
+          <div class="grid lg:grid-cols-2 gap-3">
+            <div class="panel p-4 rounded-2xl">
+              <div class="font-bold">Current Plan</div>
+              <div class="text-2xl font-extrabold mt-1">${b.plan}</div>
+              <div class="muted text-sm">$${b.price}/${b.cycle} • ${b.seats} seats</div>
+              <div class="mt-3 flex gap-2"><button class="px-3 py-2 rounded border accent-border">Manage Plan</button><button class="cta px-4 py-2 rounded-xl">Add Seats</button></div>
+            </div>
+            <div class="panel p-4 rounded-2xl">
+              <div class="font-bold">Invoices</div>
+              <div class="grid gap-2 text-sm">${b.invoices.map(i=>`<div class="p-2 rounded border border-white/10 flex items-center justify-between"><div>${i.id}</div><div>${i.ts}</div><div>${fmtMoney(i.amount)}</div><div>${i.status}</div></div>`).join('')}</div>
+            </div>
+          </div>`;
+      }
+
+      if (name==='settings'){
+        c.innerHTML = `
+          ${title('Settings')}
+          <div class="grid lg:grid-cols-2 gap-3">
+            <div class="panel p-4 rounded-2xl">
+              <div class="font-bold">Preferences</div>
+              <label class="flex items-center justify-between text-sm py-1"><span>Language</span><select id="setLang" class="px-2 py-1 rounded bg-black/30 border border-white/10"><option value="en">English</option><option value="fa">فارسی</option><option value="es">Español</option></select></label>
+              <label class="flex items-center justify-between text-sm py-1"><span>Theme</span><select id="setTheme" class="px-2 py-1 rounded bg-black/30 border border-white/10"><option value="dark">Dark</option><option value="light">Light</option></select></label>
+              <label class="flex items-center justify-between text-sm py-1"><span>High Contrast</span><input type="checkbox" id="setContrast"></label>
+              <div class="mt-3"><button class="px-3 py-2 rounded border accent-border" onclick="toast('Saved (mock)')">Save</button></div>
+            </div>
+            <div class="panel p-4 rounded-2xl">
+              <div class="font-bold">Team & Roles</div>
+              <div class="grid gap-2 text-sm">
+                ${MOCK.orgs.map(o=>`<div class="p-2 rounded border border-white/10 flex items-center justify-between"><div>${o.name}</div><select class="px-2 py-1 rounded bg-black/30 border border-white/10"><option${o.role==='admin'?' selected':''}>admin</option><option${o.role==='member'?' selected':''}>member</option><option${o.role==='viewer'?' selected':''}>viewer</option></select></div>`).join('')}
+              </div>
+            </div>
+          </div>`;
+      }
+
+      // Product modules use the drawer-style demos; show a hub with deep links
+      ['preconstruction','field','safety','forecasting','reporting','integrations'].forEach(mod=>{
+        if (name===mod){
+          c.innerHTML = `
+            ${title(mod[0].toUpperCase()+mod.slice(1))}
+            <div class="panel p-4 rounded-2xl">
+              <div class="font-bold">Quick Access</div>
+              <div class="mt-2 flex flex-wrap gap-2">
+                <a href="#" class="px-3 py-2 rounded border accent-border" onclick="openProduct('${mod}','Overview')">Overview</a>
+                <a href="#" class="px-3 py-2 rounded border accent-border" onclick="openProduct('${mod}','Screens')">Screens</a>
+                <a href="#" class="px-3 py-2 rounded border accent-border" onclick="openProduct('${mod}','Specs')">Specs</a>
+                <a href="#" class="px-3 py-2 rounded border accent-border" onclick="openProduct('${mod}','Pricing')">Pricing</a>
+                <a href="#" class="px-3 py-2 rounded border accent-border" onclick="openProduct('${mod}','Integrations')">Integrations</a>
+                <a href="#" class="px-3 py-2 rounded border accent-border" onclick="openProduct('${mod}','Security')">Security</a>
+                <a href="#" class="px-3 py-2 rounded border accent-border" onclick="openProduct('${mod}','ROI')">ROI</a>
+                <a href="#" class="px-3 py-2 rounded border accent-border" onclick="openProduct('${mod}','FAQ')">FAQ</a>
+                <a href="#" class="px-3 py-2 rounded cta" onclick="openProduct('${mod}','Demo')">Open Demo</a>
+              </div>
+            </div>`;
+        }
+      });
+    }
+
+    // Product drawer (simplified from earlier mocks)
+    const PRODUCTS = [
+      { id:'preconstruction', name:'Preconstruction', stage:'preconstruction', demoType:'precon',
+        overview:['Upload CAD/BIM/PDF','Auto schedules & contract parsing','Clash detection + design options'] },
+      { id:'field', name:'Field Tracking', stage:'field', demoType:'field',
+        overview:['Media ingest (offline)','Auto-tag rooms/components','Timeline aligns with tasks'] },
+      { id:'safety', name:'Safety & Compliance', stage:'safety', demoType:'safety',
+        overview:['PPE detection','Hazard zones & alerts','OSHA-ready reports'] },
+      { id:'forecasting', name:'Forecasting', stage:'forecasting', demoType:'forecast',
+        overview:['Delay & cost prediction','What-if mitigation'] },
+      { id:'reporting', name:'Reporting', stage:'reporting', demoType:'report',
+        overview:['Daily/Weekly/Executive reports','Checkable facts','Branding & watermarking'] },
+      { id:'integrations', name:'Integrations & API', stage:'integrations', demoType:'integrations',
+        overview:['OAuth connectors','Events & webhooks','REST/GraphQL APIs'] }
+    ];
+    const TABS = ['Overview','Screens','Specs','Pricing','Integrations','Security','ROI','FAQ','Demo'];
+
+    function openProduct(id, tab='Overview'){
+      const p = PRODUCTS.find(x=>x.id===id);
+      if (!p) return;
+      openModal(`${p.name}`, `<div class="text-xs inline-flex px-2 py-1 rounded chip">${p.stage}</div>
+        <div class="mt-3 flex flex-wrap gap-2">${TABS.map(t=>`<button class="px-3 py-2 rounded border accent-border" onclick="renderProductTab('${id}','${t}')">${t}</button>`).join('')}</div>
+        <div id="prodContent" class="mt-3"></div>`);
+      renderProductTab(id, tab);
+    }
+    function renderProductTab(id, tab){
+      const p = PRODUCTS.find(x=>x.id===id); const c=document.getElementById('prodContent'); if (!p) return;
+      if (tab==='Overview') c.innerHTML = `<ul class="list-disc pl-6 muted text-sm">${p.overview.map(x=>`<li>${x}</li>`).join('')}</ul>`;
+      else if (tab==='Demo') c.innerHTML = `<div class="p-3 rounded border border-white/10">Interactive demo stub for <b>${p.name}</b> — press <span class="kbd">G</span> to generate sample.</div>`;
+      else c.innerHTML = `<div class="muted text-sm">Content for ${tab} (mock).</div>`;
+    }
+
+    /* ----------------------
+       ENTRY
+    ----------------------- */
+    if (state.auth) { initApp(); }
+  </script>
+</body>
+</html>
